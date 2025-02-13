@@ -1,0 +1,104 @@
+Задания:
+
+1. Выведите название самолетов, которые имеют менее 50 посадочных мест?
+
+select a.aircraft_code, a.model, count(s.seat_no) as sum_seats
+from aircrafts a
+left join seats s on s.aircraft_code = a.aircraft_code
+group by a.aircraft_code, a.model
+having count(s.seat_no) < 50
+
+2. Выведите процентное изменение ежемесячной суммы бронирования билетов, округленной до сотых.
+
+select year, month, total_sum,
+ ROUND(((total_sum - LAG(total_sum) OVER (ORDER BY year, month)) /
+         LAG(total_sum) OVER (ORDER BY year, month)) * 100,2) AS percent
+FROM (
+    SELECT
+      EXTRACT(YEAR FROM book_date) AS year,
+      EXTRACT(MONTH FROM book_date) AS month,
+      SUM(total_amount) AS total_sum
+    FROM bookings
+    GROUP BY EXTRACT(YEAR FROM book_date), EXTRACT(MONTH FROM book_date)
+   ) AS monthly_totals
+
+
+3. Выведите названия самолетов не имеющих бизнес - класс. Решение должно быть через функцию array_agg.
+
+SELECT a.model 
+FROM aircrafts a 
+JOIN seats s ON s.aircraft_code = a.aircraft_code 
+GROUP BY a.model
+HAVING 'Business' != ALL(array_agg(s.fare_conditions ORDER BY a.model))
+
+4. Вывести накопительный итог количества мест в самолетах по каждому аэропорту на каждый день, 
+учитывая только те самолеты, которые летали пустыми и только те дни,
+где из одного аэропорта таких самолетов вылетало более одного.
+В результате должны быть код аэропорта, дата, количество пустых мест в самолете и накопительный итог.
+
+
+
+
+
+5. Найдите процентное соотношение перелетов по маршрутам от общего количества перелетов.
+ Выведите в результат названия аэропортов и процентное отношение.
+ Решение должно быть через оконную функцию.
+
+SELECT dep.airport_name AS departure_airport_name, arr.airport_name AS arrival_airport_name,
+    COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () AS percent
+FROM
+  flights_v fv
+JOIN
+  flights f ON f.flight_id = fv.flight_id
+JOIN
+  airports dep ON dep.airport_code = f.departure_airport
+JOIN
+  airports arr ON arr.airport_code = f.arrival_airport
+GROUP BY dep.airport_name, arr.airport_name
+
+
+
+6. Выведите количество пассажиров по каждому коду сотового оператора, если учесть, 
+что код оператора - это три символа после +7
+
+select substring ( contact_data ->> 'phone', 3 , 3) AS operator_code, count (passenger_name) 
+from tickets 
+group by operator_code
+
+
+7. Классифицируйте финансовые обороты (сумма стоимости перелетов) по маршрутам:
+ До 50 млн - low
+ От 50 млн включительно до 150 млн - middle
+ От 150 млн включительно - high
+ Выведите в результат количество маршрутов в каждом полученном классе
+
+select category, count(*)
+from (
+select CASE 
+WHEN SUM(t.amount) < 50000000 THEN 'low' 
+WHEN SUM(t.amount) >= 50000000 AND SUM(t.amount) <150000000 THEN 'middle' 
+when SUM(t.amount) >= 150000000 then 'high' END AS category, 
+count (f.flight_id)
+from ticket_flights t 
+join flights f on t.flight_id = f.flight_id 
+group by f.flight_no) c
+group by c.category
+
+
+8. Вычислите медиану стоимости перелетов, медиану размера бронирования
+ и отношение медианы бронирования к медиане стоимости перелетов, округленной до сотых
+
+ SELECT 
+ (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount) FROM ticket_flights) AS mediana_ticket, 
+ (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_amount) FROM bookings) AS mediana_bookings,
+ (
+ round ( cast ((SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_amount) FROM bookings)/
+ (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY amount) FROM ticket_flights) as numeric), 2)
+ ) as mediana_def
+
+
+
+9. Найдите значение минимальной стоимости полета 1 км для пассажиров. 
+То есть нужно найти расстояние между аэропортами и с учетом стоимости перелетов получить искомый результат
+
+
