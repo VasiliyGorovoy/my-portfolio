@@ -67,3 +67,6 @@ for country, temperatures in countries_temperature:
     # расчет средней температуры
     srednie_temperature = sum(celsie_temperatures) / len(celsie_temperatures)
     print(f'{country}: {srednie_temperature:.1f} C')
+
+
+
