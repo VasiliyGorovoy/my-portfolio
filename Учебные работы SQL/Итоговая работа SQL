@@ -44,17 +44,30 @@ HAVING 'Business' != ALL(array_agg(s.fare_conditions ORDER BY a.model))
  Выведите в результат названия аэропортов и процентное отношение.
  Решение должно быть через оконную функцию.
 
-SELECT dep.airport_name AS departure_airport_name, arr.airport_name AS arrival_airport_name,
-    COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () AS percent
-FROM
-  flights_v fv
-JOIN
-  flights f ON f.flight_id = fv.flight_id
-JOIN
-  airports dep ON dep.airport_code = f.departure_airport
-JOIN
-  airports arr ON arr.airport_code = f.arrival_airport
-GROUP BY dep.airport_name, arr.airport_name
+WITH route_counts AS (
+    SELECT 
+        dep.airport_name AS departure_airport_name, 
+        arr.airport_name AS arrival_airport_name, 
+        COUNT(*) AS route_count
+    FROM 
+        flights_v fv
+    JOIN 
+        flights f ON f.flight_id = fv.flight_id
+    JOIN 
+        airports dep ON dep.airport_code = f.departure_airport
+    JOIN 
+        airports arr ON arr.airport_code = f.arrival_airport
+    GROUP BY 
+        dep.airport_name, 
+        arr.airport_name
+)
+SELECT 
+    departure_airport_name, 
+    arrival_airport_name, 
+    route_count,
+    ROUND(route_count::NUMERIC / SUM(route_count) OVER (), 2) AS percent
+FROM 
+    route_counts;
 
 
 
